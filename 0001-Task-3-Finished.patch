@@ -1,0 +1,257 @@
+From b6204ea32ebccbfbcbae14b763ccf10a5a94ab3b Mon Sep 17 00:00:00 2001
+From: hsallrounder <hsallrounder@gmail.com>
+Date: Mon, 30 Sep 2024 01:36:44 +0530
+Subject: [PATCH] Task 3 Finished
+
+---
+ .idea/.gitignore                              |  3 ++
+ .idea/forage-jpmc-swe-task-3.iml              | 14 +++++
+ .../inspectionProfiles/profiles_settings.xml  |  6 +++
+ .idea/misc.xml                                |  4 ++
+ .idea/modules.xml                             |  8 +++
+ .idea/vcs.xml                                 |  6 +++
+ src/DataManipulator.ts                        | 43 +++++++++++----
+ src/Graph.tsx                                 | 53 +++++++++++++++----
+ 8 files changed, 115 insertions(+), 22 deletions(-)
+ create mode 100644 .idea/.gitignore
+ create mode 100644 .idea/forage-jpmc-swe-task-3.iml
+ create mode 100644 .idea/inspectionProfiles/profiles_settings.xml
+ create mode 100644 .idea/misc.xml
+ create mode 100644 .idea/modules.xml
+ create mode 100644 .idea/vcs.xml
+
+diff --git a/.idea/.gitignore b/.idea/.gitignore
+new file mode 100644
+index 0000000..26d3352
+--- /dev/null
++++ b/.idea/.gitignore
+@@ -0,0 +1,3 @@
++# Default ignored files
++/shelf/
++/workspace.xml
+diff --git a/.idea/forage-jpmc-swe-task-3.iml b/.idea/forage-jpmc-swe-task-3.iml
+new file mode 100644
+index 0000000..5994538
+--- /dev/null
++++ b/.idea/forage-jpmc-swe-task-3.iml
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<module type="PYTHON_MODULE" version="4">
++  <component name="NewModuleRootManager">
++    <content url="file://$MODULE_DIR$">
++      <excludeFolder url="file://$MODULE_DIR$/node_modules" />
++    </content>
++    <orderEntry type="inheritedJdk" />
++    <orderEntry type="sourceFolder" forTests="false" />
++  </component>
++  <component name="PyDocumentationSettings">
++    <option name="format" value="PLAIN" />
++    <option name="myDocStringFormat" value="Plain" />
++  </component>
++</module>
+\ No newline at end of file
+diff --git a/.idea/inspectionProfiles/profiles_settings.xml b/.idea/inspectionProfiles/profiles_settings.xml
+new file mode 100644
+index 0000000..105ce2d
+--- /dev/null
++++ b/.idea/inspectionProfiles/profiles_settings.xml
+@@ -0,0 +1,6 @@
++<component name="InspectionProjectProfileManager">
++  <settings>
++    <option name="USE_PROJECT_PROFILE" value="false" />
++    <version value="1.0" />
++  </settings>
++</component>
+\ No newline at end of file
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+new file mode 100644
+index 0000000..0823e4d
+--- /dev/null
++++ b/.idea/misc.xml
+@@ -0,0 +1,4 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 (forage-jpmc-swe-task-1)" project-jdk-type="Python SDK" />
++</project>
+\ No newline at end of file
+diff --git a/.idea/modules.xml b/.idea/modules.xml
+new file mode 100644
+index 0000000..ade28e9
+--- /dev/null
++++ b/.idea/modules.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="ProjectModuleManager">
++    <modules>
++      <module fileurl="file://$PROJECT_DIR$/.idea/forage-jpmc-swe-task-3.iml" filepath="$PROJECT_DIR$/.idea/forage-jpmc-swe-task-3.iml" />
++    </modules>
++  </component>
++</project>
+\ No newline at end of file
+diff --git a/.idea/vcs.xml b/.idea/vcs.xml
+new file mode 100644
+index 0000000..35eb1dd
+--- /dev/null
++++ b/.idea/vcs.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="VcsDirectoryMappings">
++    <mapping directory="" vcs="Git" />
++  </component>
++</project>
+\ No newline at end of file
+diff --git a/src/DataManipulator.ts b/src/DataManipulator.ts
+index 7f62295..ac98e20 100644
+--- a/src/DataManipulator.ts
++++ b/src/DataManipulator.ts
+@@ -1,20 +1,41 @@
+ import { ServerRespond } from './DataStreamer';
+ 
++/**
++ * Update the Row interface in DataManipulator.ts to match the new schema in Graph.tsx.
++ * This ensures the object returned by generateRow corresponds to the table's schema.
++ */
++
+ export interface Row {
+-  stock: string,
+-  top_ask_price: number,
++  price_abc: number,
++  price_def: number,
++  ratio: number,
+   timestamp: Date,
++  upper_bound: number,
++  lower_bound: number,
++  trigger_alert: number | undefined,
+ }
+ 
+-
++/**
++ * Update the generateRow function in DataManipulator to process raw server data.
++ * - Calculate price_abc and price_def using top_ask and top_bid prices.
++ * - Compute the ratio, set upper and lower bounds at +/-10%, and determine trigger_alert.
++ * - Return a single Row object instead of an array.
++ */
+ export class DataManipulator {
+-  static generateRow(serverResponds: ServerRespond[]) {
+-    return serverResponds.map((el: any) => {
+-      return {
+-        stock: el.stock,
+-        top_ask_price: el.top_ask && el.top_ask.price || 0,
+-        timestamp: el.timestamp,
+-      };
+-    })
++  static generateRow(serverRespond: ServerRespond[]): Row {
++    const priceABC = (serverRespond[0].top_ask.price + serverRespond[0].top_bid.price) / 2;
++    const priceDEF = (serverRespond[1].top_ask.price + serverRespond[1].top_bid.price) / 2;
++    const ratio = priceABC / priceDEF;
++    const upperBound = 1 + 0.1;
++    const lowerBound = 1 - 0.01;
++    return {
++      price_abc: priceABC,
++      price_def: priceDEF,
++      ratio,
++      timestamp: serverRespond[0].timestamp > serverRespond[1].timestamp ? serverRespond[0].timestamp : serverRespond[1].timestamp,
++      upper_bound: upperBound,
++      lower_bound: lowerBound,
++      trigger_alert: (ratio > upperBound || ratio < lowerBound) ? ratio : undefined,
++    };
+   }
+ }
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 277797d..a815164 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -1,5 +1,5 @@
+ import React, { Component } from 'react';
+-import { Table } from '@finos/perspective';
++import { Table, TableData } from '@finos/perspective';
+ import { ServerRespond } from './DataStreamer';
+ import { DataManipulator } from './DataManipulator';
+ import './Graph.css';
+@@ -18,15 +18,28 @@ class Graph extends Component<IProps, {}> {
+     return React.createElement('perspective-viewer');
+   }
+ 
++  /**
++  * Modify the 'componentDidMount' method to update the schema object that configures the Perspective table view.
++  * 
++  * Changes to the schema include:
++  * - Adding a 'ratio' field to track stock ratios, without distinguishing between two stocks.
++  * - Adding fields for 'upper_bound', 'lower_bound', and 'trigger_alert' to monitor when bounds are crossed.
++  * - Including 'price_abc' and 'price_def' for calculating the ratio, which will not be displayed in the graph.
++  * - Adding a 'timestamp' field to track changes over time.
++  */
++
+   componentDidMount() {
+     // Get element from the DOM.
+     const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+ 
+     const schema = {
+-      stock: 'string',
+-      top_ask_price: 'float',
+-      top_bid_price: 'float',
++      price_abc: 'float',
++      price_def: 'float',
++      ratio: 'float',
+       timestamp: 'date',
++      upper_bound: 'float',
++      lower_bound: 'float',
++      trigger_alert: 'float',
+     };
+ 
+     if (window.perspective && window.perspective.worker()) {
+@@ -35,24 +48,42 @@ class Graph extends Component<IProps, {}> {
+     if (this.table) {
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
+       elem.load(this.table);
++
++      /**
++      * To configure the graph, modify or add more attributes to the PerspectiveViewerElement.
++      *
++      * The updated attributes are as follows:
++      * - 'view': Set to 'y_line' to visualize the data as a line graph.
++      * - 'column-pivots': Removed to focus on ratios between stock ABC and DEF instead of their separate prices.
++      * - 'row-pivots': This attribute is crucial for the x-axis, allowing mapping of each data point based on its timestamp.
++      * - 'columns': Specify fields to focus on along the y-axis. We want to track 'ratio', 'lower_bound', 'upper_bound', and 'trigger_alert' to reduce noise in the graph.
++      * - 'aggregates': Handle duplicate data by consolidating similar data points into one. A data point is considered unique if it has a timestamp; otherwise, average values of non-unique fields (e.g., 'ratio', 'price_abc', etc.).
++      */
++
+       elem.setAttribute('view', 'y_line');
+-      elem.setAttribute('column-pivots', '["stock"]');
+       elem.setAttribute('row-pivots', '["timestamp"]');
+-      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('columns', '["ratio", "lower_bound", "upper_bound", "trigger_alert"]');
+       elem.setAttribute('aggregates', JSON.stringify({
+-        stock: 'distinctcount',
+-        top_ask_price: 'avg',
+-        top_bid_price: 'avg',
++        price_abc: 'avg',
++        price_def: 'avg',
++        ratio: 'avg',
+         timestamp: 'distinct count',
++        upper_bound: 'avg',
++        lower_bound: 'avg',
++        trigger_alert: 'avg',
+       }));
+     }
+   }
+ 
++  /**
++  * Update the 'componentDidUpdate' method to refresh the graph with new data.
++  * Modify the argument for 'this.table.update' to include the latest data.
++  */
+   componentDidUpdate() {
+     if (this.table) {
+-      this.table.update(
++      this.table.update([
+         DataManipulator.generateRow(this.props.data),
+-      );
++      ] as unknown as TableData);
+     }
+   }
+ }
+-- 
+2.36.1.windows.1
+
